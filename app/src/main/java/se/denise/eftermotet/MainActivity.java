@@ -8,6 +8,9 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.provider.MediaStore;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.util.Base64;
 import android.webkit.JavascriptInterface;
 import android.webkit.ValueCallback;
 import android.webkit.WebChromeClient;
@@ -21,12 +24,19 @@ import androidx.core.content.FileProvider;
 import androidx.webkit.WebViewAssetLoader;
 import java.io.File;
 import java.io.IOException;
+import org.json.JSONObject;
+import com.google.mlkit.vision.common.InputImage;
+import com.google.mlkit.vision.text.TextRecognition;
+import com.google.mlkit.vision.text.latin.TextRecognizerOptions;
+import com.google.mlkit.vision.text.TextRecognizer;
+import com.google.mlkit.vision.text.Text;
 
 public class MainActivity extends Activity {
     private static final int FILE_REQUEST = 101;
     private WebView web;
     private ValueCallback<Uri[]> fileCallback;
     private Uri cameraUri;
+    private Uri selectedImageUri;
     private String backupToSave;
 
     @Override public void onCreate(Bundle state) {
@@ -75,6 +85,33 @@ public class MainActivity extends Activity {
             }
         });
         web.addJavascriptInterface(new Object() {
+            @JavascriptInterface public void recognizeDocument(String croppedImage) {
+                Uri uri = selectedImageUri;
+                if (uri == null && (croppedImage == null || croppedImage.isEmpty())) { sendRecognition("", "Välj en bild och försök igen."); return; }
+                runOnUiThread(() -> {
+                    try {
+                        InputImage image;
+                        if (croppedImage != null && croppedImage.startsWith("data:image/jpeg;base64,")) {
+                            byte[] bytes = Base64.decode(croppedImage.substring(croppedImage.indexOf(',') + 1), Base64.DEFAULT);
+                            Bitmap bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.length);
+                            if (bitmap == null) throw new IOException("Ogiltig bild");
+                            image = InputImage.fromBitmap(bitmap, 0);
+                        } else image = InputImage.fromFilePath(MainActivity.this, uri);
+                        TextRecognizer recognizer = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS);
+                        recognizer.process(image)
+                            .addOnSuccessListener(result -> {
+                                sendRecognition(cleanRecognizedText(result), "");
+                                recognizer.close();
+                            })
+                            .addOnFailureListener(error -> {
+                                sendRecognition("", "Texten kunde inte läsas. Ta om bilden i bra ljus, nära pappret.");
+                                recognizer.close();
+                            });
+                    } catch (Exception error) {
+                        sendRecognition("", "Bilden kunde inte öppnas. Välj en annan bild.");
+                    }
+                });
+            }
             @JavascriptInterface public void syncReminders(String json) {
                 ReminderScheduler.sync(getApplicationContext(), json);
                 if (Build.VERSION.SDK_INT >= 33 && !"[]".equals(json) && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED)
@@ -106,11 +143,42 @@ public class MainActivity extends Activity {
         Uri[] selected = null;
         if (result == RESULT_OK) {
             Uri uri = data == null ? cameraUri : data.getData();
-            if (uri != null) selected = new Uri[]{uri};
+            if (uri != null) { selected = new Uri[]{uri}; selectedImageUri = uri; }
         }
         fileCallback.onReceiveValue(selected);
         fileCallback = null;
         cameraUri = null;
+    }
+
+    private void sendRecognition(String recognized, String error) {
+        runOnUiThread(() -> web.evaluateJavascript("window.receiveAndroidOcr(" +
+            JSONObject.quote(recognized) + "," + JSONObject.quote(error) + ")", null));
+    }
+
+    private static String cleanRecognizedText(Text result) {
+        StringBuilder output = new StringBuilder();
+        int accepted = 0, rejected = 0;
+        for (Text.TextBlock block : result.getTextBlocks()) {
+            for (Text.Line line : block.getLines()) {
+                String cleaned = line.getText().replaceAll("[^\\p{L}\\p{N}\\s.,!?()]", " ")
+                    .replaceAll("[ \\t]+", " ").trim();
+                android.graphics.Rect box = line.getBoundingBox();
+                int letters = cleaned.replaceAll("[^\\p{L}]", "").length();
+                int wordCount = cleaned.isEmpty() ? 0 : cleaned.split("\\s+").length;
+                // A document photograph with tiny print can produce plausible-looking
+                // fragments. Reject the entire selection when many lines fail.
+                if (box == null || box.height() < 28 || letters < 8 || wordCount < 3
+                    || line.getConfidence() < 0.80f || letters * 3 < cleaned.length() * 2
+                    || (box.width() / Math.max(1f, cleaned.length())) < 5f) {
+                    rejected++; continue;
+                }
+                accepted++;
+                if (output.length() > 0) output.append('\n');
+                output.append(cleaned);
+            }
+        }
+        if (accepted < 2 || rejected > accepted / 2) return "";
+        return output.toString();
     }
 
     @Override public void onBackPressed() {
