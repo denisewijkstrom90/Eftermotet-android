@@ -157,28 +157,25 @@ public class MainActivity extends Activity {
 
     private static String cleanRecognizedText(Text result) {
         StringBuilder output = new StringBuilder();
-        int accepted = 0, rejected = 0;
+        int reliableWords = 0;
         for (Text.TextBlock block : result.getTextBlocks()) {
             for (Text.Line line : block.getLines()) {
                 String cleaned = line.getText().replaceAll("[^\\p{L}\\p{N}\\s.,!?()]", " ")
                     .replaceAll("[ \\t]+", " ").trim();
                 android.graphics.Rect box = line.getBoundingBox();
                 int letters = cleaned.replaceAll("[^\\p{L}]", "").length();
-                int wordCount = cleaned.isEmpty() ? 0 : cleaned.split("\\s+").length;
-                // A document photograph with tiny print can produce plausible-looking
-                // fragments. Reject the entire selection when many lines fail.
-                if (box == null || box.height() < 28 || letters < 8 || wordCount < 3
-                    || line.getConfidence() < 0.80f || letters * 3 < cleaned.length() * 2
-                    || (box.width() / Math.max(1f, cleaned.length())) < 5f) {
-                    rejected++; continue;
-                }
-                accepted++;
+                int words = cleaned.isEmpty() ? 0 : cleaned.split("\\s+").length;
+                // Short headings and individual values are valid document text.
+                // Reject only obvious fragments, unreadably small glyphs and low-confidence lines.
+                if (box == null || box.height() < 10 || letters < 3 ||
+                    line.getConfidence() < 0.40f ||
+                    (words == 1 && letters < 5 && !cleaned.matches(".*\\d{2,}.*"))) continue;
                 if (output.length() > 0) output.append('\n');
                 output.append(cleaned);
+                reliableWords += words;
             }
         }
-        if (accepted < 2 || rejected > accepted / 2) return "";
-        return output.toString();
+        return reliableWords >= 3 ? output.toString() : "";
     }
 
     @Override public void onBackPressed() {
