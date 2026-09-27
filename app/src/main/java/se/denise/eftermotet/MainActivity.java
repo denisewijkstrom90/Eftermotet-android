@@ -157,25 +157,18 @@ public class MainActivity extends Activity {
 
     private static String cleanRecognizedText(Text result) {
         StringBuilder output = new StringBuilder();
-        int reliableWords = 0;
         for (Text.TextBlock block : result.getTextBlocks()) {
             for (Text.Line line : block.getLines()) {
                 String cleaned = line.getText().replaceAll("[^\\p{L}\\p{N}\\s.,!?()]", " ")
                     .replaceAll("[ \\t]+", " ").trim();
-                android.graphics.Rect box = line.getBoundingBox();
-                int letters = cleaned.replaceAll("[^\\p{L}]", "").length();
-                int words = cleaned.isEmpty() ? 0 : cleaned.split("\\s+").length;
-                // Short headings and individual values are valid document text.
-                // Reject only obvious fragments, unreadably small glyphs and low-confidence lines.
-                if (box == null || box.height() < 10 || letters < 3 ||
-                    line.getConfidence() < 0.40f ||
-                    (words == 1 && letters < 5 && !cleaned.matches(".*\\d{2,}.*"))) continue;
+                // OCR confidence and glyph size are unreliable for screenshots of zoomed documents.
+                // Keep readable candidates and let the person correct them against the image.
+                if (!cleaned.matches(".*[\\p{L}\\p{N}].*")) continue;
                 if (output.length() > 0) output.append('\n');
                 output.append(cleaned);
-                reliableWords += words;
             }
         }
-        return reliableWords >= 3 ? output.toString() : "";
+        return output.toString();
     }
 
     @Override public void onBackPressed() {
