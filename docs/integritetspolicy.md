@@ -1,8 +1,8 @@
 # Integritetspolicy för EfterMötet
 
-**Utkast för versionen med Google Play-prenumeration.** Publicera först när kontaktadress, slutlig kod och uppgifterna i Google Plays avsnitt Datasäkerhet har kontrollerats.
+**Utkast för versionen med Google Play-prenumeration.** Kontrollera slutlig kod och uppgifterna i Google Plays avsnitt Datasäkerhet före skarp publicering.
 
-Utvecklare: Whydontyouutry90 (Denise Wijkström). Kontakt för integritetsfrågor: använd supportadressen som anges på EfterMötets sida i Google Play.
+Utvecklare: Whydontyouutry90 (Denise Wijkström). Kontakt för support och integritetsfrågor: denwijappar@gmail.com.
 
 ## Uppgifter i appen
 
@@ -16,6 +16,6 @@ Appen använder internet för kontakten med Google Play och eventuella komponent
 
 Uppgifterna finns på enheten tills du tar bort dem i appen eller avinstallerar appen. Automatisk Android-säkerhetskopiering av appens data är avstängd. Du kan själv exportera en säkerhetskopia som innehåller möten, dokumentbilder och text. Du väljer var filen sparas; den kan hamna hos en annan tjänst, till exempel om du väljer en molnlagring. Skydda filen och radera den själv när den inte behövs. Import av en säkerhetskopia ersätter appens tidigare uppgifter på enheten.
 
-Appen har inget eget användarkonto. Om du vill hantera eller säga upp prenumerationen gör du det i Google Play. Frågor om dina uppgifter kan skickas till appens supportadress på Google Play.
+Appen har inget eget användarkonto. Om du vill hantera eller säga upp prenumerationen gör du det i Google Play. Frågor om dina uppgifter kan skickas till denwijappar@gmail.com.
 
 Senast uppdaterad: 28 september 2026.
