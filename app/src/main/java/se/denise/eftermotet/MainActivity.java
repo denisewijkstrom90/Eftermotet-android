@@ -4,6 +4,7 @@ import android.Manifest;
 import android.app.Activity;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.content.pm.ApplicationInfo;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -90,6 +91,9 @@ public class MainActivity extends Activity {
             }
         });
         web.addJavascriptInterface(new Object() {
+            @JavascriptInterface public boolean isDemoBuild() {
+                return (getApplicationInfo().flags & ApplicationInfo.FLAG_DEBUGGABLE) != 0;
+            }
             @JavascriptInterface public void recognizeDocument(String croppedImage) {
                 Uri uri = selectedImageUri;
                 if (uri == null && (croppedImage == null || croppedImage.isEmpty())) { sendRecognition("", "Välj en bild och försök igen."); return; }
@@ -131,21 +135,23 @@ public class MainActivity extends Activity {
                     startActivityForResult(save, 102); });
             }
             @JavascriptInterface public void startSubscription() {
-                runOnUiThread(() -> subscription.subscribe());
+                runOnUiThread(() -> { if (subscription != null) subscription.subscribe(); });
             }
             @JavascriptInterface public void refreshSubscription() {
-                runOnUiThread(() -> subscription.refresh());
+                runOnUiThread(() -> { if (subscription != null) subscription.refresh(); });
             }
             @JavascriptInterface public void manageSubscription() {
-                runOnUiThread(() -> subscription.manage());
+                runOnUiThread(() -> { if (subscription != null) subscription.manage(); });
             }
         }, "AndroidApp");
         web.loadUrl("https://appassets.androidplatform.net/assets/index.html");
-        subscription = new SubscriptionManager(this, (active, available, trial, price, message) ->
-            runOnUiThread(() -> web.evaluateJavascript("window.updateSubscription(" +
-                active + "," + available + "," + trial + "," +
-                JSONObject.quote(price) + "," + JSONObject.quote(message) + ")", null)));
-        subscription.start();
+        if ((getApplicationInfo().flags & ApplicationInfo.FLAG_DEBUGGABLE) == 0) {
+            subscription = new SubscriptionManager(this, (active, available, trial, price, message) ->
+                runOnUiThread(() -> web.evaluateJavascript("window.updateSubscription(" +
+                    active + "," + available + "," + trial + "," +
+                    JSONObject.quote(price) + "," + JSONObject.quote(message) + ")", null)));
+            subscription.start();
+        }
     }
 
     @Override protected void onResume() {
