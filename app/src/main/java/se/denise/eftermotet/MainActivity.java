@@ -4,6 +4,7 @@ import android.Manifest;
 import android.app.Activity;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.content.pm.ApplicationInfo;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -18,6 +19,8 @@ import android.webkit.WebResourceRequest;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.webkit.WebStorage;
+import android.webkit.WebResourceResponse;
+import java.io.ByteArrayInputStream;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 import androidx.core.content.FileProvider;
@@ -38,6 +41,7 @@ public class MainActivity extends Activity {
     private Uri cameraUri;
     private Uri selectedImageUri;
     private String backupToSave;
+    private SubscriptionManager subscription;
 
     @Override public void onCreate(Bundle state) {
         super.onCreate(state);
@@ -52,7 +56,9 @@ public class MainActivity extends Activity {
             .addPathHandler("/assets/", new WebViewAssetLoader.AssetsPathHandler(this)).build();
         web.setWebViewClient(new WebViewClient() {
             @Override public android.webkit.WebResourceResponse shouldInterceptRequest(WebView view, WebResourceRequest request) {
-                return assets.shouldInterceptRequest(request.getUrl());
+                if ("appassets.androidplatform.net".equals(request.getUrl().getHost()))
+                    return assets.shouldInterceptRequest(request.getUrl());
+                return new WebResourceResponse("text/plain", "UTF-8", new ByteArrayInputStream(new byte[0]));
             }
             @Override public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
                 Uri uri = request.getUrl();
@@ -85,6 +91,9 @@ public class MainActivity extends Activity {
             }
         });
         web.addJavascriptInterface(new Object() {
+            @JavascriptInterface public boolean isDemoBuild() {
+                return (getApplicationInfo().flags & ApplicationInfo.FLAG_DEBUGGABLE) != 0;
+            }
             @JavascriptInterface public void recognizeDocument(String croppedImage) {
                 Uri uri = selectedImageUri;
                 if (uri == null && (croppedImage == null || croppedImage.isEmpty())) { sendRecognition("", "Välj en bild och försök igen."); return; }
@@ -125,8 +134,35 @@ public class MainActivity extends Activity {
                     save.putExtra(Intent.EXTRA_TITLE, "EfterMotet-sakerhetskopia.json");
                     startActivityForResult(save, 102); });
             }
+            @JavascriptInterface public void startSubscription() {
+                runOnUiThread(() -> { if (subscription != null) subscription.subscribe(); });
+            }
+            @JavascriptInterface public void refreshSubscription() {
+                runOnUiThread(() -> { if (subscription != null) subscription.refresh(); });
+            }
+            @JavascriptInterface public void manageSubscription() {
+                runOnUiThread(() -> { if (subscription != null) subscription.manage(); });
+            }
         }, "AndroidApp");
         web.loadUrl("https://appassets.androidplatform.net/assets/index.html");
+        if ((getApplicationInfo().flags & ApplicationInfo.FLAG_DEBUGGABLE) == 0) {
+            subscription = new SubscriptionManager(this, (active, available, trial, price, message) ->
+                runOnUiThread(() -> web.evaluateJavascript("window.updateSubscription(" +
+                    active + "," + available + "," + trial + "," +
+                    JSONObject.quote(price) + "," + JSONObject.quote(message) + ")", null)));
+            subscription.start();
+        }
+    }
+
+    @Override protected void onResume() {
+        super.onResume();
+        if (subscription != null) subscription.refresh();
+    }
+
+    @Override protected void onDestroy() {
+        if (subscription != null) subscription.close();
+        if (web != null) web.destroy();
+        super.onDestroy();
     }
 
     @Override protected void onActivityResult(int request, int result, Intent data) {
