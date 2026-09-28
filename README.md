@@ -1,28 +1,19 @@
-# EfterMötet för Android – projektutkast
+# EfterMötet för Android
 
-Det här är källprojektet till en installerbar Android-app för telefon och surfplatta. Det är **inte en färdig APK**. Projektet behöver byggas och provas i Android Studio på en Android-enhet innan det kan installeras eller publiceras.
+Android-projekt för EfterMötet. Appen sparar möten, frågor och dokument lokalt på enheten, kan känna igen text i bilder med ML Kit och visa mötespåminnelser. Säkerhetskopior kan exporteras och importeras i appen.
 
-## Vad som finns
+## Testversion
 
-- Egen appikon och en app som öppnas utan webbläsare.
-- Möten, dokument och frågor lagras lokalt på enheten.
-- Fotografera eller välj en dokumentbild. Textigenkänningen hämtar ett kodbibliotek och språkdata via internet första gången.
-- Välj ett möte för dokumentet eller spara det enbart bland Dina dokument.
-- Android-aviseringar för valda mötespåminnelser. Telefonens batterisparläge kan förskjuta tiden något. Användaren måste tillåta aviseringar.
-- ”Så gör du” i appen och import/export av säkerhetskopia.
+GitHub Actions bygger en debug-APK under **Actions → Bygg Android-app → Artifacts**. Den är avsedd för teknisk testning, inte som signerad Google Play-version. Gör en säkerhetskopia av dina uppgifter innan du byter eller avinstallerar en tidigare testversion.
 
-## Bygg utan dator
+## Google Play
 
-Projektet innehåller `.github/workflows/android-apk.yml`. Om projektfilerna läggs i ett privat GitHub-förråd kan GitHub Actions bygga en test-APK. Den hämtas under Actions → Bygg Android-app → Artifacts på mobilen. Bygget har ännu inte körts och kan behöva rättas innan APK:n fungerar. Lägg inte personliga dokument eller säkerhetskopior i förrådet.
+Grenen `codex/play-readiness` innehåller ett utkast för prenumeration med Google Play Billing, ett utkast till integritetspolicy och en konkret checklista i [`docs/PLAY-RELEASE.md`](docs/PLAY-RELEASE.md). Prenumerationsprodukten måste konfigureras i Play Console och köptillstånd måste verifieras säkert på en server före skarp publicering. Kontaktadress, färdig integritetspolicy, uppgifter om datasäkerhet, testning och signerad AAB återstår också.
 
-## Bygg i Android Studio
+## Bygg lokalt
 
-Projektet använder Android Gradle Plugin 8.13.2, Gradle 8.13, JDK 17 och Android SDK 36. Öppna projektmappen i Android Studio, installera SDK vid behov och konfigurera Gradle 8.13. En Gradle-wrapper ingår inte i detta källpaket. Skapa den med `gradle wrapper --gradle-version 8.13` om du har Gradle installerat, eller konfigurera Android Studio att använda en lokal Gradle 8.13. Bygg sedan en debug-APK och testa på telefon och surfplatta.
+Projektet använder Android Gradle Plugin 8.13.2, Gradle 8.13, JDK 17 och Android SDK 36. Öppna projektet i Android Studio och kör `gradle assembleDebug` med rätt SDK installerat. En Gradle-wrapper ingår inte.
 
 ## Flytta uppgifter från webbversionen
 
-Uppgifterna följer inte med automatiskt eftersom appen har egen lagring. Öppna webbversionens ”Om appen”, välj ”Ladda ner säkerhetskopia” och läs sedan in filen i Android-appen under ”Om appen”.
-
-## Kvar före distribution
-
-Byggning och verklig testning av APK, särskilt kamera, textigenkänning, återställning och påminnelser. Därefter signering och distribution. iPad/iPhone kräver ett separat iOS-projekt.
+Uppgifterna följer inte med automatiskt. Exportera en säkerhetskopia från webbversionens ”Om appen” och importera den i Android-appen under ”Om appen”.
