@@ -1,7 +1,8 @@
 package se.denise.eftermotet;
 
 import android.Manifest;
-import android.app.Activity;
+import androidx.activity.ComponentActivity;
+import androidx.activity.OnBackPressedCallback;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.content.pm.ApplicationInfo;
@@ -34,7 +35,7 @@ import com.google.mlkit.vision.text.latin.TextRecognizerOptions;
 import com.google.mlkit.vision.text.TextRecognizer;
 import com.google.mlkit.vision.text.Text;
 
-public class MainActivity extends Activity {
+public class MainActivity extends ComponentActivity {
     private static final int FILE_REQUEST = 101;
     private WebView web;
     private ValueCallback<Uri[]> fileCallback;
@@ -49,6 +50,16 @@ public class MainActivity extends Activity {
         super.onCreate(state);
         web = new WebView(this);
         setContentView(web);
+        getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
+            @Override public void handleOnBackPressed() {
+                if (web.canGoBack()) web.goBack();
+                else {
+                    setEnabled(false);
+                    getOnBackPressedDispatcher().onBackPressed();
+                    setEnabled(true);
+                }
+            }
+        });
         web.setOnApplyWindowInsetsListener((view, insets) -> {
             if (Build.VERSION.SDK_INT >= 30) {
                 android.graphics.Insets bars = insets.getInsets(android.view.WindowInsets.Type.systemBars() | android.view.WindowInsets.Type.ime());
@@ -231,7 +242,4 @@ public class MainActivity extends Activity {
         return output.toString();
     }
 
-    @Override public void onBackPressed() {
-        if (web.canGoBack()) web.goBack(); else super.onBackPressed();
-    }
 }
