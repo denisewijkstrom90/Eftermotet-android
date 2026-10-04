@@ -26,7 +26,7 @@ jobs:
         run: |
           cat > "$RUNNER_TEMP/unsigned.gradle" <<'GRADLE'
           gradle.projectsEvaluated {
-              project(':app').android.buildTypes.release.signingConfig = null
+              gradle.rootProject.project(':app').android.buildTypes.release.signingConfig = null
           }
           GRADLE
           gradle --no-daemon -I "$RUNNER_TEMP/unsigned.gradle" -x validatePlayRelease testPlayDebugUnitTest bundlePlayRelease lintPlayRelease
