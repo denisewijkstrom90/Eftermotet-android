@@ -24,12 +24,16 @@ jobs:
           gradle-version: '8.13'
       - name: Build unsigned release from public source for private signing
         run: |
-          cat > "$RUNNER_TEMP/unsigned.gradle" <<'GRADLE'
-          gradle.projectsEvaluated {
-              gradle.rootProject.project(':app').android.buildTypes.release.signingConfig = null
-          }
-          GRADLE
-          gradle --no-daemon -I "$RUNNER_TEMP/unsigned.gradle" -x validatePlayRelease testPlayDebugUnitTest bundlePlayRelease lintPlayRelease
+          # Disable signing only in this disposable CI checkout; the private key stays local.
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('app/build.gradle')
+          text = p.read_text()
+          expected = 'release { signingConfig signingConfigs.release }'
+          assert text.count(expected) == 1, 'Unexpected release signing configuration'
+          p.write_text(text.replace(expected, 'release {}'))
+          PY
+          gradle --no-daemon -x validatePlayRelease testPlayDebugUnitTest bundlePlayRelease lintPlayRelease
           mkdir -p release-output
           cp app/build/outputs/bundle/playRelease/app-play-release.aab release-output/EfterMotet-1.4.2-unsigned.aab
           git rev-parse HEAD > release-output/SOURCE-COMMIT.txt
