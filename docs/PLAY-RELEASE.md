@@ -5,7 +5,7 @@
 ## Förberett i källkoden
 
 - Produktionspaket `se.denise.eftermotet`; separat demo `se.denise.eftermotet.demo`.
-- Android API 36, versionCode 10. Demo kan endast byggas som debug.
+- Android API 36, versionCode 11. Demo kan endast byggas som debug.
 - Google Play Billing 9.1.0: produkt- och erbjudandehämtning, återställning, väntande köp, köpbekräftelse med återförsök, hantering av prenumeration och kontroll vid återkomst till appen.
 - Signaturkontroll med appens offentliga Google Play-licensnyckel och kontroll av paketnamn. Köp som väntar eller är avstängda ger ingen åtkomst. Ingen lokal provperiodstimer startar betalning.
 - Läsning och export finns kvar efter avslutad tillgång. Pris och 14-dagars erbjudande visas bara utifrån Play-erbjudanden. Svenskt pris måste vara 29 kr/månad.
@@ -33,7 +33,7 @@ Aktivera produkten, basprenumerationen och erbjudandet. Testa även ett konto so
 
 1. Appens offentliga RSA-licensnyckel är mottagen 4 oktober och införd som standard i app/build.gradle. Den validerades som RSA 2048 bitar (exponent 65537). PLAY_PUBLIC_KEY kan fortfarande åsidosätta standardvärdet. Detta verifierar inte riktiga köp.
 2. Policyn är publicerad på https://denisewijkstrom90.github.io/Eftermotet-android/ och används som standard i bygget.
-3. Slutlig uppladdningsnyckel. Skapa och förvara den säkert en gång. Återanvänd den vid framtida versioner; byt inte ut en befintlig uppladdningsnyckel.
+3. Slutlig uppladdningsnyckel skapad och återställning från krypterad säkerhetskopia verifierad 4 oktober. Återanvänd denna nyckel för framtida versioner.
 4. Aktuellt läge i Play Console: konto/app, verifiering, betalningsprofil och testspår.
 
 Bygginställningar läses från Gradle-properties eller miljövariabler:
@@ -67,10 +67,25 @@ Ingen produktionspublicering eller aktivering av riktiga debiteringar ingår i d
 
 Användaren bekräftar att befintligt Play Console-konto används via whydontyoutry90@gmail.com. Utvecklarnamnet är Denwijappar; offentlig supportadress är fortsatt denwijappar@gmail.com. Appen finns som utkast, se.denise.eftermotet. Console visar 7 av 11 konfigurationsdelar slutförda och krav på minst 12 testare under minst 14 dagar inför ansökan om produktionsåtkomst. Prenumerationssidan kräver ett uppladdat Billing-bygge innan produkter kan skapas.
 
-Appåtkomst ska deklareras som begränsad för prenumerationsversionen. En fungerande kostnadsfri granskaråtkomst behöver implementeras och verifieras före instruktioner lämnas och intyget om full åtkomst markeras. Eget Google-lösenord ska inte lämnas till granskarna. Målgruppsformuläret är blockerat tills appåtkomst är slutförd. Granskaråtkomsten förbereds enligt avsnittet nedan. Ingen signerad release-AAB är skapad. Console har nu kontrollerats: inga uppladdade AAB-filer och inget registrerat uppladdningscertifikat.
+Appåtkomst ska deklareras som begränsad för prenumerationsversionen. En fungerande kostnadsfri granskaråtkomst behöver implementeras och verifieras före instruktioner lämnas och intyget om full åtkomst markeras. Eget Google-lösenord ska inte lämnas till granskarna. Målgruppsformuläret är blockerat tills appåtkomst är slutförd. Granskaråtkomsten förbereds enligt avsnittet nedan. Signerad release-AAB för version 1.4.1 är nu byggd och verifierad; se byggresultat nedan. Console har nu kontrollerats: inga uppladdade AAB-filer och inget registrerat uppladdningscertifikat.
 
 ## Granskaråtkomst, version 1.4.1 (versionCode 11)
 
 Native code-entry dialog reachable through “Reviewer access / Granskaråtkomst” on the subscription screen. The confidential 32-character code grants full access without payment and persists across restarts. The visible reviewer banner allows ending access. Only the SHA-256 digest is in source. The confidential code is retained privately. No personal Google password is required. Native code-validation unit tests and UI bridge tests cover invalid codes, valid-code normalization, the dialog entry point and ending access. Real-device testing is still required before certifying full reviewer access in Play Console.
 
-Screenshots confirm Google manages app signing; the upload certificate appears after the first AAB upload. No AAB is uploaded. A proposed CI step to generate the first upload key and export a signed AAB plus encrypted recovery backup was blocked by automatic approval review. It has not been executed or committed. No upload key was generated. The owner explicitly approved this exact credential-handling step on 4 October at 19:10 Swedish time: create the first upload key, build the signed AAB and retain an encrypted recovery backup through GitHub. Future builds must always reuse the first accepted upload key.
+Screenshots confirm Google manages app signing; the upload certificate appears after the first AAB upload. No AAB is uploaded. A proposed CI step to generate the first upload key and export a signed AAB plus encrypted recovery backup was blocked by automatic approval review. It has not been executed or committed. The approved follow-up created the upload key and verified encrypted recovery, as recorded below. The owner explicitly approved this exact credential-handling step on 4 October at 19:10 Swedish time: create the first upload key, build the signed AAB and retain an encrypted recovery backup through GitHub. Future builds must always reuse the first accepted upload key.
+
+## Signerad första AAB – verifierad 4 oktober
+
+- Byggcommit: 60e9da6d41a85da084ba80961bf809643c20fe9f.
+- Releasekörning: https://github.com/denisewijkstrom90/Eftermotet-android/actions/runs/37219695782 (success).
+- Parallell ordinarie kontroll: Actions #42 (success).
+- testPlayDebugUnitTest, bundlePlayRelease, lintPlayRelease samt jarsigner-verifiering godkända.
+- Fil: EfterMotet-1.4.1.aab, 21 780 198 byte.
+- SHA-256: e08d21aae0fa8affa72ad7936e6e5c1cc084ab2a791fbf5599be6a9b6e912f18.
+- Produktionspaket se.denise.eftermotet, versionName 1.4.1, versionCode 11.
+- Uppladdningsnyckeln är RSA 3072. Återställning från RSA-OAEP/AES-GCM-kopian är verifierad; återställd nyckel och publikt certifikat matchar AAB-signeringen.
+- ML Kit-biblioteken för arm64-v8a och x86_64 har ELF-segmentalignment 16 KB.
+- Privat nyckelsäkerhetskopia har sparats hos ägaren. Ingen privat uppladdningsnyckel eller signeringslösenord finns i repository eller offentliga GitHub-artifacts.
+- Engångsworkflow och nyckelgenereringsscript tas bort efter bygget. Framtida uppdateringar MÅSTE använda samma sparade uppladdningsnyckel via säker signeringskonfiguration.
+- AAB har inte laddats upp i Play Console. Den ska först användas i internt test. Granskaråtkomst, Androidfunktioner och riktiga köp behöver fortfarande testas på enhet. Prenumerationsprodukter är inte skapade av detta bygge.
