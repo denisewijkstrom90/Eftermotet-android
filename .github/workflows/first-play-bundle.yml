@@ -21,7 +21,6 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.13'
-      - uses: android-actions/setup-android@v3
       - run: python3 -m pip install cryptography==46.0.0
       - name: Create first upload key and encrypted recovery copy
         run: python3 release/bootstrap-signing.py
