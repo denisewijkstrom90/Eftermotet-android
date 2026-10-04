@@ -27,7 +27,9 @@ Uppdaterad 4 oktober 2026. Appen är en testkandidat; en betalrelease är ännu 
 
 ## Bekräftade steg i denna session
 
-- Signerad 1.4.1-AAB (versionCode 11) accepterades av Play Console och sparades som internt testutkast. Ingen test- eller produktionslansering bekräftades.
+- Signerad 1.4.2-AAB (versionCode 12, mål-SDK 36) accepterades av Play Console och sparades i det interna testutkastet `1.4.2 – internt test`. Den äldre 1.4.1-filen togs bort ur utkastet men finns kvar i artefaktbiblioteket. Ingen test- eller produktionslansering har gjorts.
+- Versionskontrollen visade tre varningar: inga testare valda, ingen deobfuskeringsfil och inga integrerade felsökningssymboler. Inga blockerande versionsfel visades.
+- Appöversikten visar 8 av 11 konfigurationsuppgifter klara. Granskaråtkomst, målgrupp och datasäkerhet återstår. Målgruppsformuläret kräver att granskaråtkomsten slutförs först.
 - Prenumerationsprodukten skapades.
 - Basplanen `manad` sparades och aktiverades för Sverige: automatisk månadsförnyelse, 29,00 SEK inklusive moms.
 - Erbjudandet `gratis-14-dagar` sparades och aktiverades: 14 dagar gratis för kunder som aldrig haft denna prenumeration, därefter basplanens månadspris. Båda raderna verifierades som Aktiva i Play Console.
@@ -41,7 +43,11 @@ Fil: EfterMotet-1.4.1.aab, 21 780 198 byte.
 SHA-256: `e08d21aae0fa8affa72ad7936e6e5c1cc084ab2a791fbf5599be6a9b6e912f18`.
 Bygge, lint, enhetstester och signaturverifiering godkändes. ML Kit-biblioteken för arm64-v8a och x86_64 kontrollerades för 16 KB-alignment.
 
-En ny signerad 1.4.2-AAB återstår. Återanvänd samma uppladdningsnyckel som för 1.4.1. Signeringsnyckel, lösenord och granskarens kod ska hållas privata och inte läggas i Git.
+Signerad 1.4.2 byggdes från commit `d0e44321fe565e24784837de00b0a91abf424574`, Actions-run 37236186409. Releasebygge, `testPlayDebugUnitTest` och `lintPlayRelease` godkändes. CI skapade en osignerad bundle i en tillfällig checkout utan privat nyckel; slutfilen signerades lokalt med samma uppladdningsnyckel som för 1.4.1. Certifikatmatchning och jarsigner-verifiering godkändes.
+Fil: EfterMotet-1.4.2.aab, 21 797 042 byte.
+SHA-256: `58ed2020eba8f976842379ffc47c52e517961115e7242dee66e4907189a8fa7e`.
+Uppladdningscertifikat SHA-256: `fb6430e13394453f8e4ce67a2d07af3a67c20178ecfb961aaf2ad752b314f629`.
+Signeringsnyckel, lösenord och granskarens kod ska hållas privata och inte läggas i Git.
 
 Java 17, Gradle 8.13 och Android SDK 36 används. Bygginställningar läses från Gradle-properties eller miljövariabler:
 `PLAY_PUBLIC_KEY`, `PUBLIC_POLICY_URL`, `RELEASE_STORE_FILE`, `RELEASE_STORE_PASSWORD`, `RELEASE_KEY_ALIAS`, `RELEASE_KEY_PASSWORD`.
@@ -55,11 +61,11 @@ gradle bundlePlayRelease
 ## Kvar före lansering
 
 1. Kontrollera aktuell verifiering, prenumerationsstatus och testspår i Play Console.
-2. Bygg och ladda upp signerad 1.4.2 före testlanseringen.
+2. Bekräfta ägarens Google Play-konto på testtelefonen, lägg till testare och lansera det sparade interna 1.4.2-utkastet.
 3. Kontrollera att testversionen hämtar den aktiva basplanen och 14-dagarserbjudandet från Play.
 4. Testa riktiga Play-köp: provperiod, köp utan provperiod, avbrutna/väntande köp, förnyelse, uppsägning, utgång och återställning.
 5. Testa nekade behörigheter, telefonens omstart, ändrade/borttagna påminnelser, TalkBack, stor text och surfplatta.
-6. Slutför appåtkomst, målgrupp, innehållsklassificering, Data safety, butiksskärmbilder och aktuella deklarationer utifrån releaseversionen.
-7. Uppfyll kontots krav på sluten testning och produktionsåtkomst. Tidigare Console-visning angav minst 12 testare under 14 dagar; kontrollera aktuellt krav.
+6. Slutför granskaråtkomst, målgrupp och datasäkerhet; kontrollera att redan ifyllda deklarationer och butiksuppgifter stämmer med releaseversionen.
+7. Uppfyll kontots krav på sluten testning och produktionsåtkomst. Den aktuella appöversikten bekräftar minst 12 testare som deltagit kontinuerligt under minst 14 dagar; 0 deltar nu. Intern testning räknas inte som detta slutna test.
 
 CI och debugtester verifierar inte riktiga debiteringar eller fullständig releaseberedskap.
