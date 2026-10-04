@@ -1,14 +1,48 @@
 plugins { id 'com.android.application' }
 
+def setting = { name -> providers.gradleProperty(name).orElse(providers.environmentVariable(name)).getOrElse('') }
+def publicKey = setting('PLAY_PUBLIC_KEY').replaceAll('\\s', '')
+def policyUrl = setting('PUBLIC_POLICY_URL')
+def keyPath = setting('RELEASE_STORE_FILE')
+def quoted = { value -> '"' + value.replace('\\', '\\\\').replace('"', '\\"') + '"' }
+
 android {
     namespace 'se.denise.eftermotet'
     compileSdk 36
+    buildFeatures { buildConfig true }
     defaultConfig {
         applicationId 'se.denise.eftermotet'
         minSdk 26
-        targetSdk 35
-        versionCode 7
-        versionName '1.1'
+        targetSdk 36
+        versionCode 10
+        versionName '1.4'
+        buildConfigField 'String', 'PLAY_PUBLIC_KEY', quoted(publicKey)
+        buildConfigField 'String', 'PUBLIC_POLICY_URL', quoted(policyUrl)
+    }
+    flavorDimensions += 'access'
+    productFlavors {
+        demo {
+            dimension 'access'
+            applicationIdSuffix '.demo'
+            buildConfigField 'boolean', 'DEMO', 'true'
+            resValue 'string', 'app_name', 'EfterMötet test'
+        }
+        play {
+            dimension 'access'
+            buildConfigField 'boolean', 'DEMO', 'false'
+            resValue 'string', 'app_name', 'EfterMötet'
+        }
+    }
+    signingConfigs {
+        release {
+            if (keyPath) storeFile file(keyPath)
+            storePassword setting('RELEASE_STORE_PASSWORD')
+            keyAlias setting('RELEASE_KEY_ALIAS')
+            keyPassword setting('RELEASE_KEY_PASSWORD')
+        }
+    }
+    buildTypes {
+        release { signingConfig signingConfigs.release }
     }
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_17
@@ -16,8 +50,26 @@ android {
     }
 }
 
+tasks.register('validatePlayRelease') {
+    doLast {
+        if (!publicKey) throw new GradleException('PLAY_PUBLIC_KEY saknas. Kopiera appens offentliga licensnyckel från Play Console.')
+        try {
+            java.security.KeyFactory.getInstance('RSA').generatePublic(new java.security.spec.X509EncodedKeySpec(
+                java.util.Base64.getMimeDecoder().decode(publicKey)))
+        } catch (Exception ignored) { throw new GradleException('PLAY_PUBLIC_KEY är inte en giltig RSA-nyckel.') }
+        if (!(policyUrl ==~ /https:\/\/.+/)) throw new GradleException('PUBLIC_POLICY_URL måste vara en offentlig HTTPS-adress.')
+        if (!keyPath || !file(keyPath).isFile() || !setting('RELEASE_STORE_PASSWORD') || !setting('RELEASE_KEY_ALIAS') || !setting('RELEASE_KEY_PASSWORD'))
+            throw new GradleException('Slutlig uppladdningsnyckel och signeringsinställningar saknas.')
+    }
+}
+tasks.configureEach { task ->
+    if (task.name == 'prePlayReleaseBuild') task.dependsOn('validatePlayRelease')
+    if (task.name == 'preDemoReleaseBuild') task.doFirst { throw new GradleException('Demoversionen får endast byggas som debug.') }
+}
+
 dependencies {
     implementation 'androidx.webkit:webkit:1.16.0'
     implementation 'androidx.core:core:1.16.0'
     implementation 'com.google.mlkit:text-recognition:16.0.1'
+    implementation 'com.android.billingclient:billing:9.1.0'
 }
