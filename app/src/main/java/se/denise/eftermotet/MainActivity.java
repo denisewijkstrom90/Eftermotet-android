@@ -1,7 +1,8 @@
 package se.denise.eftermotet;
 
 import android.Manifest;
-import android.app.Activity;
+import androidx.activity.ComponentActivity;
+import androidx.activity.OnBackPressedCallback;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.content.pm.ApplicationInfo;
@@ -34,7 +35,7 @@ import com.google.mlkit.vision.text.latin.TextRecognizerOptions;
 import com.google.mlkit.vision.text.TextRecognizer;
 import com.google.mlkit.vision.text.Text;
 
-public class MainActivity extends Activity {
+public class MainActivity extends ComponentActivity {
     private static final int FILE_REQUEST = 101;
     private WebView web;
     private ValueCallback<Uri[]> fileCallback;
@@ -44,10 +45,17 @@ public class MainActivity extends Activity {
     private SubscriptionManager subscription;
     private String subscriptionState;
     private boolean pageReady;
+    private OnBackPressedCallback webBack;
 
     @Override public void onCreate(Bundle state) {
         super.onCreate(state);
         web = new WebView(this);
+        webBack = new OnBackPressedCallback(false) {
+            @Override public void handleOnBackPressed() {
+                web.goBack();
+            }
+        };
+        getOnBackPressedDispatcher().addCallback(this, webBack);
         setContentView(web);
         web.setOnApplyWindowInsetsListener((view, insets) -> {
             if (Build.VERSION.SDK_INT >= 30) {
@@ -65,7 +73,11 @@ public class MainActivity extends Activity {
         WebViewAssetLoader assets = new WebViewAssetLoader.Builder()
             .addPathHandler("/assets/", new WebViewAssetLoader.AssetsPathHandler(this)).build();
         web.setWebViewClient(new WebViewClient() {
+            @Override public void doUpdateVisitedHistory(WebView view, String url, boolean reload) {
+                webBack.setEnabled(view.canGoBack());
+            }
             @Override public void onPageFinished(WebView view, String url) {
+                webBack.setEnabled(view.canGoBack());
                 pageReady = url.equals("https://appassets.androidplatform.net/assets/index.html");
                 if (pageReady && subscriptionState != null) web.evaluateJavascript(subscriptionState, null);
             }
@@ -231,7 +243,4 @@ public class MainActivity extends Activity {
         return output.toString();
     }
 
-    @Override public void onBackPressed() {
-        if (web.canGoBack()) web.goBack(); else super.onBackPressed();
-    }
 }
