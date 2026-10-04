@@ -27,8 +27,10 @@ Uppdaterad 4 oktober 2026. Appen är en testkandidat; en betalrelease är ännu 
 
 ## Bekräftade steg i denna session
 
-- Signerad 1.4.2-AAB (versionCode 12, mål-SDK 36) accepterades av Play Console och sparades i det interna testutkastet `1.4.2 – internt test`. Den äldre 1.4.1-filen togs bort ur utkastet men finns kvar i artefaktbiblioteket. Ingen test- eller produktionslansering har gjorts.
-- Versionskontrollen visade tre varningar: inga testare valda, ingen deobfuskeringsfil och inga integrerade felsökningssymboler. Inga blockerande versionsfel visades.
+- Signerad 1.4.2-AAB (versionCode 12, mål-SDK 36) accepterades av Play Console och sparades i det interna testutkastet `1.4.2 – internt test`. Den äldre 1.4.1-filen togs bort ur utkastet men finns kvar i artefaktbiblioteket. Den interna testversionen lanserades den 4 oktober 2026 kl. 23:39 svensk tid och verifierades som Aktiva / Tillgänglig för interna testare. Ingen produktionslansering har gjorts.
+- Ägarens bekräftade Google Play-konto lades till i en sparad e-postlista med en användare, och listan valdes för det interna testet. Konto-adressen hålls utanför detta offentliga dokument.
+- Efter val av testare visade versionskontrollen två varningar: ingen deobfuskeringsfil och inga integrerade felsökningssymboler. Inga blockerande versionsfel visades.
+- Testlänken hämtades från den aktiva kanalen: https://play.google.com/apps/internaltest/4700382073966090356 . Användaren måste öppna den med det inbjudna kontot och själv gå med i testet. Installation och Play-köptester har ännu inte verifierats.
 - Appöversikten visar 8 av 11 konfigurationsuppgifter klara. Granskaråtkomst, målgrupp och datasäkerhet återstår. Målgruppsformuläret kräver att granskaråtkomsten slutförs först.
 - Prenumerationsprodukten skapades.
 - Basplanen `manad` sparades och aktiverades för Sverige: automatisk månadsförnyelse, 29,00 SEK inklusive moms.
@@ -61,7 +63,7 @@ gradle bundlePlayRelease
 ## Kvar före lansering
 
 1. Kontrollera aktuell verifiering, prenumerationsstatus och testspår i Play Console.
-2. Bekräfta ägarens Google Play-konto på testtelefonen, lägg till testare och lansera det sparade interna 1.4.2-utkastet.
+2. Ägaren behöver gå med via den aktiva interna testlänken och installera 1.4.2 från Google Play med sitt bekräftade testkonto. Konfigurera och verifiera licenstestning före testköp så att testflödet inte debiterar ett riktigt köp.
 3. Kontrollera att testversionen hämtar den aktiva basplanen och 14-dagarserbjudandet från Play.
 4. Testa riktiga Play-köp: provperiod, köp utan provperiod, avbrutna/väntande köp, förnyelse, uppsägning, utgång och återställning.
 5. Testa nekade behörigheter, telefonens omstart, ändrade/borttagna påminnelser, TalkBack, stor text och surfplatta.
