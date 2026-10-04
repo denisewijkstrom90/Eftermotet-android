@@ -12,15 +12,24 @@ final class ReminderScheduler {
     private static final String PREFS = "reminders";
     private static final String KEY = "items";
 
-    static void sync(Context context, String json) {
+    static synchronized void sync(Context context, String json) {
         JSONArray next;
         try { next = new JSONArray(json); } catch (Exception ignored) { return; }
         if (next.length() > 500) return;
         String previous = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString(KEY, "[]");
         try {
             JSONArray old = new JSONArray(previous);
-            for (int i = 0; i < old.length(); i++) cancel(context, old.optJSONObject(i));
-            for (int i = 0; i < next.length(); i++) schedule(context, next.optJSONObject(i));
+            for (int i = 0; i < old.length(); i++) {
+                JSONObject before = old.optJSONObject(i);
+                JSONObject after = find(next, before == null ? "" : before.optString("id"));
+                if (!same(before, after)) cancel(context, before);
+            }
+            for (int i = 0; i < next.length(); i++) {
+                JSONObject after = next.optJSONObject(i);
+                JSONObject before = find(old, after == null ? "" : after.optString("id"));
+                // Keep an overdue alarm: Android may still be preparing to deliver it.
+                if (!same(before, after)) schedule(context, after);
+            }
             context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putString(KEY, next.toString()).apply();
         } catch (Exception ignored) { }
     }
@@ -31,6 +40,30 @@ final class ReminderScheduler {
             JSONArray items = new JSONArray(stored);
             for (int i = 0; i < items.length(); i++) schedule(context, items.optJSONObject(i));
         } catch (Exception ignored) { }
+    }
+
+    static boolean unchanged(long beforeAt, String beforeTitle, String beforeWhen,
+            long afterAt, String afterTitle, String afterWhen) {
+        return beforeAt == afterAt && beforeTitle.equals(afterTitle) && beforeWhen.equals(afterWhen);
+    }
+
+    private static JSONObject find(JSONArray items, String id) {
+        for (int i = 0; i < items.length(); i++) {
+            JSONObject item = items.optJSONObject(i);
+            if (item != null && id.equals(item.optString("id"))) return item;
+        }
+        return null;
+    }
+
+    private static boolean same(JSONObject before, JSONObject after) {
+        return before != null && after != null && unchanged(
+            before.optLong("at"), before.optString("title"), before.optString("when"),
+            after.optLong("at"), after.optString("title"), after.optString("when"));
+    }
+
+    static boolean preciseAllowed(Context context) {
+        AlarmManager alarms = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
+        return Build.VERSION.SDK_INT < 31 || alarms.canScheduleExactAlarms();
     }
 
     private static PendingIntent intent(Context context, JSONObject item, int flags) {
@@ -59,6 +92,14 @@ final class ReminderScheduler {
         PendingIntent pending = intent(context, item, PendingIntent.FLAG_UPDATE_CURRENT);
         if (pending == null) return;
         AlarmManager alarms = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
+        if (preciseAllowed(context)) {
+            try {
+                alarms.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, pending);
+                return;
+            } catch (SecurityException ignored) {
+                // Permission can be revoked between the check and scheduling.
+            }
+        }
         alarms.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, pending);
     }
 }

@@ -16,8 +16,8 @@ android {
         applicationId 'se.denise.eftermotet'
         minSdk 26
         targetSdk 36
-        versionCode 11
-        versionName '1.4.1'
+        versionCode 12
+        versionName '1.4.2'
         buildConfigField 'String', 'REVIEW_ACCESS_SHA256', quoted('9019837d15145833aeb5e2a13bdbcbb93180dc7ddb6aa5b9993ddeafcfd2ed38')
         buildConfigField 'String', 'PLAY_PUBLIC_KEY', quoted(publicKey)
         buildConfigField 'String', 'PUBLIC_POLICY_URL', quoted(policyUrl)

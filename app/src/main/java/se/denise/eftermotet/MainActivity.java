@@ -56,6 +56,25 @@ public class MainActivity extends ComponentActivity {
         if (pageReady) web.evaluateJavascript(subscriptionState, null);
     }
 
+    private void showReminderSettings() {
+        if (Build.VERSION.SDK_INT < 31 || ReminderScheduler.preciseAllowed(this)) {
+            android.widget.Toast.makeText(this, "Exakta påminnelser är tillåtna. Kontrollera också att aviseringar är på.", android.widget.Toast.LENGTH_LONG).show();
+            return;
+        }
+        new android.app.AlertDialog.Builder(this)
+            .setTitle("Påminnelser vid vald tid")
+            .setMessage("Tillåt EfterMötet under Alarm och påminnelser för att få mötespåminnelser vid vald tid. Utan tillstånd kan Android fördröja dem upp till en timme, ibland längre i batterisparläge.")
+            .setNegativeButton("Inte nu", null)
+            .setPositiveButton("Öppna inställningar", (dialog, which) -> {
+                try {
+                    startActivity(new Intent(android.provider.Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM,
+                        Uri.parse("package:" + getPackageName())));
+                } catch (android.content.ActivityNotFoundException error) {
+                    android.widget.Toast.makeText(this, "Öppna Alarm och påminnelser i mobilens appinställningar.", android.widget.Toast.LENGTH_LONG).show();
+                }
+            }).show();
+    }
+
     private void showReviewerAccess() {
         android.widget.EditText input = new android.widget.EditText(this);
         input.setSingleLine(true);
@@ -74,6 +93,8 @@ public class MainActivity extends ComponentActivity {
 
     @Override public void onCreate(Bundle state) {
         super.onCreate(state);
+        android.app.NotificationManager notifications = (android.app.NotificationManager) getSystemService(NOTIFICATION_SERVICE);
+        notifications.createNotificationChannel(new android.app.NotificationChannel(ReminderReceiver.CHANNEL, "Mötespåminnelser", android.app.NotificationManager.IMPORTANCE_DEFAULT));
         web = new WebView(this);
         setContentView(web);
         getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
@@ -173,6 +194,7 @@ public class MainActivity extends ComponentActivity {
                     }
                 });
             }
+            @JavascriptInterface public void openReminderSettings() { runOnUiThread(() -> showReminderSettings()); }
             @JavascriptInterface public void syncReminders(String json) {
                 ReminderScheduler.sync(getApplicationContext(), json);
                 if (Build.VERSION.SDK_INT >= 33 && !"[]".equals(json) && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED)
@@ -216,6 +238,7 @@ public class MainActivity extends ComponentActivity {
 
     @Override protected void onResume() {
         super.onResume();
+        ReminderScheduler.restore(getApplicationContext());
         if (subscription != null) subscription.refresh();
     }
 
