@@ -1,0 +1,53 @@
+name: Build Play bundle for private signing
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/play-release-candidate.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  bundle:
+    if: github.event_name == 'workflow_dispatch' || (github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.head.ref == 'eftermotet-1-4-validation')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.13'
+      - name: Build unsigned release from public source for private signing
+        run: |
+          # Disable signing only in this disposable CI checkout; the private key stays local.
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('app/build.gradle')
+          text = p.read_text()
+          expected = 'release { signingConfig signingConfigs.release }'
+          assert text.count(expected) == 1, 'Unexpected release signing configuration'
+          p.write_text(text.replace(expected, 'release {}'))
+          PY
+          gradle --no-daemon -x validatePlayRelease testPlayDebugUnitTest bundlePlayRelease lintPlayRelease
+          mkdir -p release-output
+          cp app/build/outputs/bundle/playRelease/app-play-release.aab release-output/EfterMotet-1.4.2-unsigned.aab
+          git rev-parse HEAD > release-output/SOURCE-COMMIT.txt
+          sha256sum release-output/EfterMotet-1.4.2-unsigned.aab > release-output/SHA256.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: EfterMotet-1.4.2-unsigned-for-private-signing
+          path: release-output/
+          if-no-files-found: error
+          retention-days: 30
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: EfterMotet-1.4.2-release-validation
+          path: |
+            app/build/reports/lint-results-playRelease.html
+            app/build/test-results/testPlayDebugUnitTest/

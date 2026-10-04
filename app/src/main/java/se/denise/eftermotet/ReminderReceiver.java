@@ -25,7 +25,7 @@ public class ReminderReceiver extends BroadcastReceiver {
         NotificationCompat.Builder notification = new NotificationCompat.Builder(context, CHANNEL)
             .setSmallIcon(R.drawable.ic_notification).setContentTitle("Dags att förbereda mötet")
             .setContentText((title == null ? "Möte" : title) + (when == null ? "" : " · " + when))
-            .setAutoCancel(true).setContentIntent(tap);
+            .setVisibility(NotificationCompat.VISIBILITY_PRIVATE).setAutoCancel(true).setContentIntent(tap);
         NotificationManagerCompat.from(context).notify(intent.getIntExtra("id", 0), notification.build());
     }
 }
