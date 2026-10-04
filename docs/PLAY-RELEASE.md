@@ -10,7 +10,7 @@
 - Signaturkontroll med appens offentliga Google Play-licensnyckel och kontroll av paketnamn. Köp som väntar eller är avstängda ger ingen åtkomst. Ingen lokal provperiodstimer startar betalning.
 - Läsning och export finns kvar efter avslutad tillgång. Pris och 14-dagars erbjudande visas bara utifrån Play-erbjudanden. Svenskt pris måste vara 29 kr/månad.
 - Ingen egen köpserver. Kontroll sker på enheten mot Play och RSA-signaturen. Google rekommenderar säker serververifiering för starkare skydd mot manipulerade klienter; den här implementationen har inte det skyddet. Inga servicekontohemligheter ska läggas i Androidappen.
-- Integritetspolicy i `docs/integritetspolicy.html` och i appen. Policyn beskriver den här arkitekturen. Offentlig adress behöver ordnas.
+- Integritetspolicy i `docs/integritetspolicy.html` och i appen. Policyn beskriver den här arkitekturen. Offentlig adress: https://denisewijkstrom90.github.io/Eftermotet-android/.
 
 ## Exakta värden i Play Console
 
@@ -31,8 +31,8 @@ Aktivera produkten, basprenumerationen och erbjudandet. Testa även ett konto so
 
 ## Uppgifter som saknas från kontot
 
-1. Offentlig RSA-licensnyckel för just denna app, från Play Consoles licensiering/monetiseringsinställningar. Den är inte ett lösenord eller en privat nyckel.
-2. Offentlig HTTPS-adress till policyn. Den lokala HTML-filen är förberedd men inte publicerad av detta arbete.
+1. Appens offentliga RSA-licensnyckel är mottagen 4 oktober och införd som standard i app/build.gradle. Den validerades som RSA 2048 bitar (exponent 65537). PLAY_PUBLIC_KEY kan fortfarande åsidosätta standardvärdet. Detta verifierar inte riktiga köp.
+2. Policyn är publicerad på https://denisewijkstrom90.github.io/Eftermotet-android/ och används som standard i bygget.
 3. Slutlig uppladdningsnyckel. Skapa och förvara den säkert en gång. Återanvänd den vid framtida versioner; byt inte ut en befintlig uppladdningsnyckel.
 4. Aktuellt läge i Play Console: konto/app, verifiering, betalningsprofil och testspår.
 
@@ -62,3 +62,9 @@ Sista kommandot stoppas utan licensnyckel, offentlig policyadress och slutlig si
 - Slutliga butiksskärmbilder från Android. Kontots eventuella krav på sluten testning och produktionsåtkomst måste uppfyllas.
 
 Ingen produktionspublicering eller aktivering av riktiga debiteringar ingår i den automatiska byggkontrollen.
+
+## Bekräftat kontoläge 4 oktober, kväll
+
+Användaren bekräftar att befintligt Play Console-konto används via whydontyoutry90@gmail.com. Utvecklarnamnet är Denwijappar; offentlig supportadress är fortsatt denwijappar@gmail.com. Appen finns som utkast, se.denise.eftermotet. Console visar 7 av 11 konfigurationsdelar slutförda och krav på minst 12 testare under minst 14 dagar inför ansökan om produktionsåtkomst. Prenumerationssidan kräver ett uppladdat Billing-bygge innan produkter kan skapas.
+
+Appåtkomst ska deklareras som begränsad för prenumerationsversionen. En fungerande kostnadsfri granskaråtkomst behöver implementeras och verifieras före instruktioner lämnas och intyget om full åtkomst markeras. Eget Google-lösenord ska inte lämnas till granskarna. Målgruppsformuläret är blockerat tills appåtkomst är slutförd. Ingen fungerande granskaråtkomst eller signerad release-AAB är skapad av denna nyckeländring. Befintlig uppladdningssignering måste först kontrolleras i Play Console; skapa inte ersättningsnyckel utan den kontrollen.
