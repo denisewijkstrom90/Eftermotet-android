@@ -45,18 +45,21 @@ public class MainActivity extends ComponentActivity {
     private SubscriptionManager subscription;
     private String subscriptionState;
     private boolean pageReady;
-    private OnBackPressedCallback webBack;
 
     @Override public void onCreate(Bundle state) {
         super.onCreate(state);
         web = new WebView(this);
-        webBack = new OnBackPressedCallback(false) {
-            @Override public void handleOnBackPressed() {
-                web.goBack();
-            }
-        };
-        getOnBackPressedDispatcher().addCallback(this, webBack);
         setContentView(web);
+        getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
+            @Override public void handleOnBackPressed() {
+                if (web.canGoBack()) web.goBack();
+                else {
+                    setEnabled(false);
+                    getOnBackPressedDispatcher().onBackPressed();
+                    setEnabled(true);
+                }
+            }
+        });
         web.setOnApplyWindowInsetsListener((view, insets) -> {
             if (Build.VERSION.SDK_INT >= 30) {
                 android.graphics.Insets bars = insets.getInsets(android.view.WindowInsets.Type.systemBars() | android.view.WindowInsets.Type.ime());
@@ -73,11 +76,7 @@ public class MainActivity extends ComponentActivity {
         WebViewAssetLoader assets = new WebViewAssetLoader.Builder()
             .addPathHandler("/assets/", new WebViewAssetLoader.AssetsPathHandler(this)).build();
         web.setWebViewClient(new WebViewClient() {
-            @Override public void doUpdateVisitedHistory(WebView view, String url, boolean reload) {
-                webBack.setEnabled(view.canGoBack());
-            }
             @Override public void onPageFinished(WebView view, String url) {
-                webBack.setEnabled(view.canGoBack());
                 pageReady = url.equals("https://appassets.androidplatform.net/assets/index.html");
                 if (pageReady && subscriptionState != null) web.evaluateJavascript(subscriptionState, null);
             }
