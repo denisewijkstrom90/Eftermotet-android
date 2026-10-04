@@ -19,7 +19,7 @@ jobs:
         with:
           gradle-version: '8.13'
       - name: Bygg båda Androidvarianterna och granska
-        run: gradle --no-daemon assembleDemoDebug assemblePlayDebug lintDemoDebug lintPlayDebug
+        run: gradle --no-daemon assembleDemoDebug assemblePlayDebug lintDemoDebug lintPlayDebug testPlayDebugUnitTest
       - uses: actions/upload-artifact@v4
         with:
           name: EfterMotet-test-1.4

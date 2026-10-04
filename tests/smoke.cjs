@@ -16,6 +16,8 @@ const server = http.createServer((req, res) => {
   await context.addInitScript(() => { window.AndroidApp = {
     isDemoBuild: () => false, syncReminders: () => {}, refreshSubscription: () => {},
     startSubscription: () => { window.buyCalls = (window.buyCalls || 0) + 1; },
+    openReviewerAccess: () => { window.reviewCalls = (window.reviewCalls || 0) + 1; },
+    endReviewerAccess: () => { window.updateSubscription(false,false,false,'',''); window.updateReviewerAccess(false); },
     manageSubscription: () => { window.manageCalls = (window.manageCalls || 0) + 1; },
     saveBackup: json => { window.exportedBackup = JSON.parse(json); }
   }; });
@@ -25,6 +27,9 @@ const server = http.createServer((req, res) => {
   await page.goto(`http://127.0.0.1:${server.address().port}/`);
   await page.waitForFunction(() => typeof window.updateSubscription === 'function');
   assert.equal(await page.locator('#newButton').isVisible(), false);
+  await page.locator('#reviewAccessButton').click();
+  assert.equal(await page.evaluate(() => window.reviewCalls), 1);
+  assert.equal(await page.locator('#newButton').isVisible(), false, 'Opening code entry must not unlock access');
   await page.evaluate(() => window.updateSubscription(false, true, true, '29,00 kr', ''));
   assert.match(await page.locator('#subscriptionOffer').textContent(), /14 dagar gratis.*29,00 kr/);
   await page.locator('#subscribeButton').click();
@@ -79,6 +84,12 @@ const server = http.createServer((req, res) => {
     await page.setViewportSize(viewport);
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
   }
+  await page.evaluate(() => {window.updateSubscription(true,false,false,'','');window.updateReviewerAccess(true)});
+  assert.equal(await page.locator('#reviewBanner').isVisible(), true);
+  assert.equal(await page.locator('#newButton').isVisible(), true);
+  await page.locator('#endReviewButton').click();
+  assert.equal(await page.locator('#reviewBanner').isVisible(), false);
+  assert.equal(await page.locator('#newButton').isVisible(), false);
   assert.deepEqual(errors, []);
   await browser.close();
   console.log('PASS: purchase UI, no premature access, paid/trial text, meetings, documents, six themes, persistence, read-only/export, restore/import validation, phone/tablet layout.');

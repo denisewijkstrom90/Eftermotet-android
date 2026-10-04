@@ -46,6 +46,32 @@ public class MainActivity extends ComponentActivity {
     private String subscriptionState;
     private boolean pageReady;
 
+    private boolean reviewerActive() {
+        return BuildConfig.REVIEW_ACCESS_SHA256.equals(getPreferences(MODE_PRIVATE).getString("reviewAccess", ""));
+    }
+
+    private void publishAccess(boolean active, boolean available, boolean trial, String price, String message) {
+        boolean review = reviewerActive();
+        subscriptionState = "window.updateSubscription(" + (active || review) + "," + (available && !review) + "," + trial + "," + JSONObject.quote(price) + "," + JSONObject.quote(message) + ");window.updateReviewerAccess(" + review + ")";
+        if (pageReady) web.evaluateJavascript(subscriptionState, null);
+    }
+
+    private void showReviewerAccess() {
+        android.widget.EditText input = new android.widget.EditText(this);
+        input.setSingleLine(true);
+        input.setInputType(android.text.InputType.TYPE_CLASS_TEXT | android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD);
+        new android.app.AlertDialog.Builder(this)
+            .setTitle("Reviewer access / Granskaråtkomst")
+            .setMessage("Enter the review code supplied in Play Console. No purchase is required.")
+            .setView(input).setNegativeButton("Cancel", null)
+            .setPositiveButton("Unlock", (dialog, which) -> {
+                if (ReviewAccess.accepts(input.getText().toString(), BuildConfig.REVIEW_ACCESS_SHA256)) {
+                    getPreferences(MODE_PRIVATE).edit().putString("reviewAccess", BuildConfig.REVIEW_ACCESS_SHA256).apply();
+                    publishAccess(false, false, false, "", "Reviewer access enabled. No subscription or payment has been started.");
+                } else android.widget.Toast.makeText(this, "Invalid review code", android.widget.Toast.LENGTH_LONG).show();
+            }).show();
+    }
+
     @Override public void onCreate(Bundle state) {
         super.onCreate(state);
         web = new WebView(this);
@@ -160,8 +186,16 @@ public class MainActivity extends ComponentActivity {
                     save.putExtra(Intent.EXTRA_TITLE, "EfterMotet-sakerhetskopia.json");
                     startActivityForResult(save, 102); });
             }
+            @JavascriptInterface public void openReviewerAccess() { runOnUiThread(() -> showReviewerAccess()); }
+            @JavascriptInterface public void endReviewerAccess() {
+                runOnUiThread(() -> {
+                    getPreferences(MODE_PRIVATE).edit().remove("reviewAccess").apply();
+                    publishAccess(false, false, false, "", "Kontrollerar prenumerationen…");
+                    if (subscription != null) subscription.refresh();
+                });
+            }
             @JavascriptInterface public void startSubscription() {
-                runOnUiThread(() -> { if (subscription != null) subscription.subscribe(); });
+                runOnUiThread(() -> { if (subscription != null && !reviewerActive()) subscription.subscribe(); });
             }
             @JavascriptInterface public void refreshSubscription() {
                 runOnUiThread(() -> { if (subscription != null) subscription.refresh(); });
@@ -174,8 +208,7 @@ public class MainActivity extends ComponentActivity {
         if (!BuildConfig.DEMO) {
             subscription = new SubscriptionManager(this, (active, available, trial, price, message) ->
                 runOnUiThread(() -> {
-                    subscriptionState = "window.updateSubscription(" + active + "," + available + "," + trial + "," + JSONObject.quote(price) + "," + JSONObject.quote(message) + ")";
-                    if (pageReady) web.evaluateJavascript(subscriptionState, null);
+                    publishAccess(active, available, trial, price, message);
                 }));
             subscription.start();
         }
