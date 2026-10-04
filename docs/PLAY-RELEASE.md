@@ -29,9 +29,10 @@ Uppdaterad 4 oktober 2026. Appen är en testkandidat; en betalrelease är ännu 
 
 - Signerad 1.4.1-AAB (versionCode 11) accepterades av Play Console och sparades som internt testutkast. Ingen test- eller produktionslansering bekräftades.
 - Prenumerationsprodukten skapades.
-- Månadsbasplanen förbereddes för Sverige. Prisraden verifierades som 29,00 SEK. Google svarade att ändringarna inte kunde sparas; sparande och aktivering är därför inte verifierade. Gratiserbjudandet är inte skapat i denna session.
+- Basplanen `manad` sparades och aktiverades för Sverige: automatisk månadsförnyelse, 29,00 SEK inklusive moms.
+- Erbjudandet `gratis-14-dagar` sparades och aktiverades: 14 dagar gratis för kunder som aldrig haft denna prenumeration, därefter basplanens månadspris. Båda raderna verifierades som Aktiva i Play Console.
 - Ägarens Androidtest av debugkandidaten 1.4.2 bekräftar påminnelse en timme före möte, öppning från avisering, backup/import och beständigt färgval. Se REMINDER-TEST.md.
-- Vid det senare fortsättningsförsöket kunde webbläsaren inte nå Google-inloggningen. Aktuell status och ändringar i andra sessioner måste kontrolleras innan samma utkast eller produkt ändras.
+- Google-inloggningen fungerade vid det senaste försöket. Prenumerationens aktivering innebär inte att appen är publicerad.
 
 ## Signerat bygge och nästa release
 
@@ -55,7 +56,7 @@ gradle bundlePlayRelease
 
 1. Kontrollera aktuell verifiering, prenumerationsstatus och testspår i Play Console.
 2. Bygg och ladda upp signerad 1.4.2 före testlanseringen.
-3. Spara och aktivera rätt basplan samt 14-dagarserbjudandet.
+3. Kontrollera att testversionen hämtar den aktiva basplanen och 14-dagarserbjudandet från Play.
 4. Testa riktiga Play-köp: provperiod, köp utan provperiod, avbrutna/väntande köp, förnyelse, uppsägning, utgång och återställning.
 5. Testa nekade behörigheter, telefonens omstart, ändrade/borttagna påminnelser, TalkBack, stor text och surfplatta.
 6. Slutför appåtkomst, målgrupp, innehållsklassificering, Data safety, butiksskärmbilder och aktuella deklarationer utifrån releaseversionen.
