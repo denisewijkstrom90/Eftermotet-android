@@ -1,0 +1,47 @@
+name: First signed EfterMotet bundle
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/first-play-bundle.yml'
+permissions:
+  contents: read
+jobs:
+  first-bundle:
+    if: github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.head.ref == 'eftermotet-1-4-validation'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.13'
+      - uses: android-actions/setup-android@v3
+      - run: python3 -m pip install cryptography==46.0.0
+      - name: Create first upload key and encrypted recovery copy
+        run: python3 release/bootstrap-signing.py
+      - name: Build and verify signed release
+        run: |
+          gradle --no-daemon testPlayDebugUnitTest bundlePlayRelease lintPlayRelease
+          jarsigner -verify app/build/outputs/bundle/playRelease/app-play-release.aab
+          cp app/build/outputs/bundle/playRelease/app-play-release.aab release-output/EfterMotet-1.4.1.aab
+          sha256sum release-output/EfterMotet-1.4.1.aab > release-output/AAB-SHA256.txt
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: EfterMotet-first-signed-bundle-and-encrypted-key
+          path: release-output/
+          if-no-files-found: error
+          retention-days: 30
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: EfterMotet-release-validation
+          path: |
+            app/build/reports/lint-results-playRelease.html
+            app/build/test-results/testPlayDebugUnitTest/
