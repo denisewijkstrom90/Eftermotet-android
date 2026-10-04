@@ -1,9 +1,11 @@
 package se.denise.eftermotet;
 
 import android.Manifest;
-import android.app.Activity;
+import androidx.activity.ComponentActivity;
+import androidx.activity.OnBackPressedCallback;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.content.pm.ApplicationInfo;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -18,6 +20,8 @@ import android.webkit.WebResourceRequest;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.webkit.WebStorage;
+import android.webkit.WebResourceResponse;
+import java.io.ByteArrayInputStream;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 import androidx.core.content.FileProvider;
@@ -31,28 +35,55 @@ import com.google.mlkit.vision.text.latin.TextRecognizerOptions;
 import com.google.mlkit.vision.text.TextRecognizer;
 import com.google.mlkit.vision.text.Text;
 
-public class MainActivity extends Activity {
+public class MainActivity extends ComponentActivity {
     private static final int FILE_REQUEST = 101;
     private WebView web;
     private ValueCallback<Uri[]> fileCallback;
     private Uri cameraUri;
     private Uri selectedImageUri;
     private String backupToSave;
+    private SubscriptionManager subscription;
+    private String subscriptionState;
+    private boolean pageReady;
 
     @Override public void onCreate(Bundle state) {
         super.onCreate(state);
         web = new WebView(this);
         setContentView(web);
+        getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
+            @Override public void handleOnBackPressed() {
+                if (web.canGoBack()) web.goBack();
+                else {
+                    setEnabled(false);
+                    getOnBackPressedDispatcher().onBackPressed();
+                    setEnabled(true);
+                }
+            }
+        });
+        web.setOnApplyWindowInsetsListener((view, insets) -> {
+            if (Build.VERSION.SDK_INT >= 30) {
+                android.graphics.Insets bars = insets.getInsets(android.view.WindowInsets.Type.systemBars() | android.view.WindowInsets.Type.ime());
+                view.setPadding(bars.left, bars.top, bars.right, bars.bottom);
+            } else view.setPadding(insets.getSystemWindowInsetLeft(), insets.getSystemWindowInsetTop(), insets.getSystemWindowInsetRight(), insets.getSystemWindowInsetBottom());
+            return insets;
+        });
         web.getSettings().setJavaScriptEnabled(true);
         web.getSettings().setDomStorageEnabled(true);
         web.getSettings().setDatabaseEnabled(true);
         web.getSettings().setAllowFileAccess(false);
+        web.getSettings().setMixedContentMode(android.webkit.WebSettings.MIXED_CONTENT_NEVER_ALLOW);
         web.getSettings().setAllowContentAccess(true);
         WebViewAssetLoader assets = new WebViewAssetLoader.Builder()
             .addPathHandler("/assets/", new WebViewAssetLoader.AssetsPathHandler(this)).build();
         web.setWebViewClient(new WebViewClient() {
+            @Override public void onPageFinished(WebView view, String url) {
+                pageReady = url.equals("https://appassets.androidplatform.net/assets/index.html");
+                if (pageReady && subscriptionState != null) web.evaluateJavascript(subscriptionState, null);
+            }
             @Override public android.webkit.WebResourceResponse shouldInterceptRequest(WebView view, WebResourceRequest request) {
-                return assets.shouldInterceptRequest(request.getUrl());
+                if ("appassets.androidplatform.net".equals(request.getUrl().getHost()))
+                    return assets.shouldInterceptRequest(request.getUrl());
+                return new WebResourceResponse("text/plain", "UTF-8", new ByteArrayInputStream(new byte[0]));
             }
             @Override public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
                 Uri uri = request.getUrl();
@@ -85,6 +116,9 @@ public class MainActivity extends Activity {
             }
         });
         web.addJavascriptInterface(new Object() {
+            @JavascriptInterface public boolean isDemoBuild() {
+                return BuildConfig.DEMO;
+            }
             @JavascriptInterface public void recognizeDocument(String croppedImage) {
                 Uri uri = selectedImageUri;
                 if (uri == null && (croppedImage == null || croppedImage.isEmpty())) { sendRecognition("", "Välj en bild och försök igen."); return; }
@@ -92,6 +126,7 @@ public class MainActivity extends Activity {
                     try {
                         InputImage image;
                         if (croppedImage != null && croppedImage.startsWith("data:image/jpeg;base64,")) {
+                            if (croppedImage.length() > 16_000_000) throw new IOException("Bilden är för stor");
                             byte[] bytes = Base64.decode(croppedImage.substring(croppedImage.indexOf(',') + 1), Base64.DEFAULT);
                             Bitmap bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.length);
                             if (bitmap == null) throw new IOException("Ogiltig bild");
@@ -125,8 +160,41 @@ public class MainActivity extends Activity {
                     save.putExtra(Intent.EXTRA_TITLE, "EfterMotet-sakerhetskopia.json");
                     startActivityForResult(save, 102); });
             }
+            @JavascriptInterface public void startSubscription() {
+                runOnUiThread(() -> { if (subscription != null) subscription.subscribe(); });
+            }
+            @JavascriptInterface public void refreshSubscription() {
+                runOnUiThread(() -> { if (subscription != null) subscription.refresh(); });
+            }
+            @JavascriptInterface public void manageSubscription() {
+                runOnUiThread(() -> { if (subscription != null) subscription.manage(); });
+            }
         }, "AndroidApp");
         web.loadUrl("https://appassets.androidplatform.net/assets/index.html");
+        if (!BuildConfig.DEMO) {
+            subscription = new SubscriptionManager(this, (active, available, trial, price, message) ->
+                runOnUiThread(() -> {
+                    subscriptionState = "window.updateSubscription(" + active + "," + available + "," + trial + "," + JSONObject.quote(price) + "," + JSONObject.quote(message) + ")";
+                    if (pageReady) web.evaluateJavascript(subscriptionState, null);
+                }));
+            subscription.start();
+        }
+    }
+
+    @Override protected void onResume() {
+        super.onResume();
+        if (subscription != null) subscription.refresh();
+    }
+
+    @Override protected void onPause() {
+        if (subscription != null) subscription.pause();
+        super.onPause();
+    }
+
+    @Override protected void onDestroy() {
+        if (subscription != null) subscription.close();
+        if (web != null) web.destroy();
+        super.onDestroy();
     }
 
     @Override protected void onActivityResult(int request, int result, Intent data) {
@@ -134,12 +202,15 @@ public class MainActivity extends Activity {
         if (request == 102) {
             if (result == RESULT_OK && data != null && data.getData() != null && backupToSave != null) {
                 try (OutputStream stream = getContentResolver().openOutputStream(data.getData())) {
-                    if (stream != null) stream.write(backupToSave.getBytes(StandardCharsets.UTF_8));
-                } catch (IOException ignored) { }
+                    if (stream == null) throw new IOException("Ingen fil öppnades");
+                    stream.write(backupToSave.getBytes(StandardCharsets.UTF_8));
+                    android.widget.Toast.makeText(this, "Säkerhetskopian sparades", android.widget.Toast.LENGTH_LONG).show();
+                } catch (IOException error) { android.widget.Toast.makeText(this, "Kopian kunde inte sparas. Försök igen.", android.widget.Toast.LENGTH_LONG).show(); }
             }
             backupToSave = null; return;
         }
         if (request != FILE_REQUEST || fileCallback == null) return;
+        selectedImageUri = null;
         Uri[] selected = null;
         if (result == RESULT_OK) {
             Uri uri = data == null ? cameraUri : data.getData();
@@ -171,7 +242,4 @@ public class MainActivity extends Activity {
         return output.toString();
     }
 
-    @Override public void onBackPressed() {
-        if (web.canGoBack()) web.goBack(); else super.onBackPressed();
-    }
 }
