@@ -2,7 +2,7 @@ plugins { id 'com.android.application' }
 
 def setting = { name -> providers.gradleProperty(name).orElse(providers.environmentVariable(name)).getOrElse('') }
 def publicKey = setting('PLAY_PUBLIC_KEY').replaceAll('\\s', '')
-def policyUrl = setting('PUBLIC_POLICY_URL')
+def policyUrl = setting('PUBLIC_POLICY_URL') ?: 'https://denisewijkstrom90.github.io/Eftermotet-android/'
 def keyPath = setting('RELEASE_STORE_FILE')
 def quoted = { value -> '"' + value.replace('\\', '\\\\').replace('"', '\\"') + '"' }
 
